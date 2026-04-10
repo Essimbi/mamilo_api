@@ -1,0 +1,48 @@
+{
+  "title": "Mon premier article",
+  "slug": "mon-premier-article",
+  "excerpt": "Ceci est un exemple d'article créé via l'API.",
+  "status": "published",
+  "published_at": "2025-01-01T10:00:00Z",
+  "cover_image_id": null,
+  "category_ids": [],
+  "tag_ids": [],
+  "blocks": [
+    {
+      "type": "heading",
+      "content": {
+        "level": 1,
+        "text": "Introduction"
+      },
+      "position": 0
+    },
+    {
+      "type": "paragraph",
+      "content": {
+        "text": "Ceci est un paragraphe d'exemple pour illustrer la structure des blocks."
+      },
+      "position": 1
+    },
+    {
+      "type": "heading",
+      "content": {
+        "level": 2,
+        "text": "Conclusion"
+      },
+      "position": 2
+    },
+    {
+      "type": "paragraph",
+      "content": {
+        "text": "Merci d'avoir lu !"
+      },
+      "position": 3
+    }
+  ],
+  "seo": {
+    "meta_title": "Mon premier article - API Blog",
+    "meta_description": "Exemple de création d'article via l'API REST du blog.",
+    "og_image_id": null,
+    "canonical_url": null
+  }
+}

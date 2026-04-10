@@ -1,0 +1,29 @@
+<?php
+
+namespace App\Http\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+class UpdateArticleRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    public function rules(): array
+    {
+        return [
+            'title' => 'nullable|string|max:255',
+            'slug' => 'nullable|string|unique:articles,slug,' . ($this->article->id ?? ''),
+            'excerpt' => 'nullable|string',
+            'cover_image_id' => 'nullable|exists:media,id',
+            'status' => 'nullable|in:draft,review,scheduled,published,archived',
+            'published_at' => 'nullable|date',
+            'category_ids' => 'nullable|array',
+            'category_ids.*' => 'exists:categories,id',
+            'tag_ids' => 'nullable|array',
+            'tag_ids.*' => 'exists:tags,id',
+        ];
+    }
+}

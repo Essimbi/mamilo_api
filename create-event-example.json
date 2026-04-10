@@ -1,0 +1,15 @@
+{
+  "title": "Conférence API",
+  "slug": "conference-api",
+  "description": "Présentation des nouveautés de notre API RESTful avec démos live.",
+  "location": "Paris, France",
+  "event_date": "2025-06-15T14:00:00Z",
+  "type": "conference",
+  "cover_image_id": null,
+  "recap_article_id": null,
+  "seo": {
+    "meta_title": "Conférence API - Juin 2025",
+    "meta_description": "Rejoignez-nous pour une conférence sur les meilleures pratiques API.",
+    "og_image_id": null
+  }
+}

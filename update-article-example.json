@@ -1,0 +1,10 @@
+{
+  "title": "Titre modifié",
+  "slug": "article-modifie",
+  "excerpt": "Extrait mis à jour",
+  "status": "published",
+  "published_at": "2025-01-15T14:30:00Z",
+  "cover_image_id": null,
+  "category_ids": ["uuid-category-1", "uuid-category-2"],
+  "tag_ids": ["uuid-tag-1"]
+}
