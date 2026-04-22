@@ -49,9 +49,16 @@ class EventController extends BaseController
     )]
     public function index(Request $request): JsonResponse
     {
-        $events = Event::with(['coverImage', 'gallery'])
-            ->latest('event_date')
-            ->paginate($request->limit ?? 10);
+        $query = Event::with(['coverImage', 'gallery'])
+            ->when($request->type, function ($q) use ($request) {
+                $q->where('type', $request->type);
+            })
+            ->when($request->status, function ($q) use ($request) {
+                $q->where('status', $request->status);
+            })
+            ->latest('event_date');
+
+        $events = $query->paginate($request->limit ?? 10);
 
         return $this->sendResponse(EventResource::collection($events), 'Événements récupérés.', ['total' => $events->total()]);
     }

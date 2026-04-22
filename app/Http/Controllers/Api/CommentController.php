@@ -80,7 +80,7 @@ class CommentController extends BaseController
 
         $request->validate([
             'author_name' => 'required|string|max:255',
-            'author_avatar' => 'nullable|url',
+            'author_avatar' => 'nullable|string|max:255',
             'content' => 'required|string',
         ]);
 
@@ -214,7 +214,7 @@ class CommentController extends BaseController
 
         $request->validate([
             'author_name' => 'required|string|max:255',
-            'author_avatar' => 'nullable|url',
+            'author_avatar' => 'nullable|string|max:255',
             'content' => 'required|string',
         ]);
 
@@ -222,10 +222,12 @@ class CommentController extends BaseController
             'author_name' => $request->author_name,
             'author_avatar' => $request->author_avatar,
             'content' => $request->content,
-            'is_approved' => false,
+            'is_approved' => false, // Or true if we auto-approve for now
         ]);
 
-        return $this->sendResponse([], 'Commentaire soumis avec succès. Il sera visible après modération.', [], 201);
+        \Illuminate\Support\Facades\Cache::forget('event_show_' . $event->slug);
+
+        return $this->sendResponse(new \App\Http\Resources\CommentResource($comment), 'Commentaire soumis avec succès. Il sera visible après modération.', [], 201);
     }
 
     /**
