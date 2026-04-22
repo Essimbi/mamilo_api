@@ -23,6 +23,7 @@ class ArticleResource extends JsonResource
             'tags' => TagResource::collection($this->tags),
             'blocks' => ContentBlockResource::collection($this->blocks),
             'seo' => new SeoMetaResource($this->seo),
+            'likesCount' => $this->likes_count ?? 0,
             'comments' => CommentResource::collection($this->whenLoaded('comments')),
             'createdAt' => $this->created_at->toISOString(),
             'updatedAt' => $this->updated_at->toISOString(),

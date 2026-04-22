@@ -26,6 +26,8 @@ class StoreEventRequest extends FormRequest
             'seo.meta_title' => 'nullable|string|max:255',
             'seo.meta_description' => 'nullable|string',
             'seo.og_image_id' => 'nullable|exists:media,id',
+            'gallery_ids' => 'nullable|array',
+            'gallery_ids.*' => 'exists:media,id',
         ];
     }
 }

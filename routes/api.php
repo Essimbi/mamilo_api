@@ -23,6 +23,8 @@ Route::group(['prefix' => 'v1'], function () {
 
     // Public
     Route::get('/articles', [ArticleController::class, 'index']);
+    Route::get('/articles/{id}/related', [ArticleController::class, 'related']);
+    Route::get('/articles/{id}/navigation', [ArticleController::class, 'navigation']);
     Route::get('/articles/{slug}', [ArticleController::class, 'show']);
     Route::post('/articles/{id}/like', [ArticleController::class, 'like']);
     Route::delete('/articles/{id}/like', [ArticleController::class, 'unlike']);
@@ -41,6 +43,7 @@ Route::group(['prefix' => 'v1'], function () {
 
     Route::get('/search', [\App\Http\Controllers\Api\SearchController::class, 'index']);
     Route::get('/settings', [\App\Http\Controllers\Api\SettingsController::class, 'index']);
+    Route::post('/contact', [\App\Http\Controllers\Api\ContactController::class, 'store']);
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/profile', [\App\Http\Controllers\Api\ProfileController::class, 'show']);
@@ -70,7 +73,9 @@ Route::group(['prefix' => 'v1'], function () {
 
             // Media
             Route::get('/media', [MediaController::class, 'index']);
+            Route::get('/media/{media}', [MediaController::class, 'show']);
             Route::post('/media/upload', [MediaController::class, 'upload']);
+            Route::put('/media/{media}', [MediaController::class, 'update']);
             Route::delete('/media/{media}', [MediaController::class, 'destroy']);
 
             // Comments (Admin)

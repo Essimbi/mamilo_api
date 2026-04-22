@@ -19,11 +19,14 @@ class EventResource extends JsonResource
             'type' => $this->type,
             'status' => $this->status,
             'coverImage' => new MediaResource($this->coverImage),
+            'gallery' => MediaResource::collection($this->whenLoaded('gallery')),
             'recapArticle' => $this->recap_article_id ? [
                 'id' => $this->recap_article_id,
                 'slug' => $this->recapArticle->slug ?? null,
                 'title' => $this->recapArticle->title ?? null,
             ] : null,
+            'likesCount' => $this->likes_count ?? 0,
+            'comments' => CommentResource::collection($this->whenLoaded('comments')),
             'seo' => new SeoMetaResource($this->seo),
             'createdAt' => $this->created_at->toISOString(),
         ];

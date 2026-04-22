@@ -88,10 +88,12 @@ class CommentController extends BaseController
             'author_name' => $request->author_name,
             'author_avatar' => $request->author_avatar,
             'content' => $request->content,
-            'is_approved' => false,
+            'is_approved' => true,
         ]);
 
-        return $this->sendResponse([], 'Commentaire soumis avec succès. Il sera visible après modération.', [], 201);
+        \Illuminate\Support\Facades\Cache::forget('article_show_v3_' . $article->slug);
+
+        return $this->sendResponse(new \App\Http\Resources\CommentResource($comment), 'Commentaire soumis avec succès.', [], 201);
     }
 
     /**

@@ -22,6 +22,8 @@ class UpdateEventRequest extends FormRequest
             'type' => 'nullable|string|max:255',
             'cover_image_id' => 'nullable|exists:media,id',
             'recap_article_id' => 'nullable|exists:articles,id',
+            'gallery_ids' => 'nullable|array',
+            'gallery_ids.*' => 'exists:media,id',
         ];
     }
 }

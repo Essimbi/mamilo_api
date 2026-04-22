@@ -122,4 +122,31 @@ class MediaService
             \Log::warning('Thumbnail generation failed: ' . $e->getMessage());
         }
     }
+
+    /**
+     * Delete media file and its thumbnail.
+     *
+     * @param Media $media
+     * @return void
+     */
+    public function deleteMedia(Media $media): void
+    {
+        try {
+            // Delete original file
+            if ($media->path && Storage::disk('public')->exists($media->path)) {
+                Storage::disk('public')->delete($media->path);
+            }
+
+            // Delete thumbnail if exists
+            if ($media->thumbnail_path && Storage::disk('public')->exists($media->thumbnail_path)) {
+                Storage::disk('public')->delete($media->thumbnail_path);
+            }
+
+            // Delete database record
+            $media->delete();
+        } catch (\Exception $e) {
+            Log::error('Media deletion failed: ' . $e->getMessage());
+            throw $e;
+        }
+    }
 }

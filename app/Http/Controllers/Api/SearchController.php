@@ -60,7 +60,13 @@ class SearchController extends BaseController
         $articles = Article::where('status', 'published')
             ->where(function ($q) use ($query) {
                 $q->where('title', 'like', "%{$query}%")
-                  ->orWhere('excerpt', 'like', "%{$query}%");
+                  ->orWhere('excerpt', 'like', "%{$query}%")
+                  ->orWhereHas('categories', function($query_cat) use ($query) {
+                      $query_cat->where('name', 'like', "%{$query}%");
+                  })
+                  ->orWhereHas('tags', function($query_tag) use ($query) {
+                      $query_tag->where('name', 'like', "%{$query}%");
+                  });
             })
             ->with(['author', 'categories', 'tags', 'coverImage'])
             ->latest('published_at')
@@ -69,6 +75,7 @@ class SearchController extends BaseController
 
         $events = Event::where('title', 'like', "%{$query}%")
             ->orWhere('description', 'like', "%{$query}%")
+            ->orWhere('event_location', 'like', "%{$query}%")
             ->latest('event_date')
             ->limit(10)
             ->get();

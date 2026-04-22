@@ -71,16 +71,12 @@ class ArticleController extends BaseController
             $query->where('status', 'published');
         }
 
-        $cacheKey = 'articles_index_' . md5(serialize($request->all()) . (auth()->check() ? auth()->user()->role : 'guest'));
-
-        return \Illuminate\Support\Facades\Cache::remember($cacheKey, 3600, function () use ($query, $request) {
-            $articles = $query->paginate($request->limit ?? 20);
-            return $this->sendResponse(
-                ArticleListResource::collection($articles),
-                'Articles récupérés.',
-                ['total' => $articles->total()]
-            );
-        });
+        $articles = $query->paginate($request->limit ?? 20);
+        return $this->sendResponse(
+            ArticleListResource::collection($articles),
+            'Articles récupérés.',
+            ['total' => $articles->total()]
+        );
     }
 
     /**
@@ -121,9 +117,9 @@ class ArticleController extends BaseController
         // Blocks
         if (isset($data['blocks'])) {
             foreach ($data['blocks'] as $block) {
-                // Sanitize HTML content in blocks
-                if (isset($block['content']) && is_string($block['content'])) {
-                    $block['content'] = $this->contentService->sanitizeHtml($block['content']);
+                // Sanitize text content in blocks if present
+                if (isset($block['content']['text']) && is_string($block['content']['text'])) {
+                    $block['content']['text'] = $this->contentService->sanitizeHtml($block['content']['text']);
                 }
                 $article->blocks()->create($block);
             }
@@ -168,15 +164,27 @@ class ArticleController extends BaseController
     )]
     public function show(string $slug): JsonResponse
     {
-        $cacheKey = 'article_show_' . $slug;
+        $cacheKey = 'article_show_v3_' . $slug;
 
-        return \Illuminate\Support\Facades\Cache::remember($cacheKey, 86400, function () use ($slug) {
-            $article = Article::with(['blocks', 'author', 'categories', 'tags', 'seo', 'coverImage'])
-                ->where('slug', $slug)
-                ->firstOrFail();
+        try {
+            $data = \Illuminate\Support\Facades\Cache::remember($cacheKey, 86400, function () use ($slug) {
+                $article = Article::with(['blocks', 'author', 'categories', 'tags', 'seo', 'coverImage', 'comments'])
+                    ->where('slug', $slug)
+                    ->firstOrFail();
+                return json_decode(json_encode(new ArticleResource($article)), true);
+            });
 
-            return $this->sendResponse(new ArticleResource($article), 'Article récupéré.');
-        });
+            // If we somehow got an object instead of an array (old corrupted cache)
+            if (!is_array($data)) {
+                \Illuminate\Support\Facades\Cache::forget($cacheKey);
+                return $this->show($slug); // Recursive call to re-calculate and cache as array
+            }
+
+            return $this->sendResponse($data, 'Article récupéré.');
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Cache::forget($cacheKey);
+            throw $e;
+        }
     }
 
     /**
@@ -215,9 +223,9 @@ class ArticleController extends BaseController
             
             // Create new blocks
             foreach ($data['blocks'] as $block) {
-                // Sanitize HTML content in blocks
-                if (isset($block['content']) && is_string($block['content'])) {
-                    $block['content'] = $this->contentService->sanitizeHtml($block['content']);
+                // Sanitize text content in blocks if present
+                if (isset($block['content']['text']) && is_string($block['content']['text'])) {
+                    $block['content']['text'] = $this->contentService->sanitizeHtml($block['content']['text']);
                 }
                 $article->blocks()->create($block);
             }
@@ -227,6 +235,7 @@ class ArticleController extends BaseController
         }
         
         $article->update($data);
+        \Illuminate\Support\Facades\Cache::forget('article_show_v3_' . $article->slug);
 
         // Update relations
         if (isset($data['category_ids'])) {
@@ -301,7 +310,7 @@ class ArticleController extends BaseController
         $article->increment('likes_count');
         
         // Invalidate cache
-        \Illuminate\Support\Facades\Cache::forget('article_show_' . $article->slug);
+        \Illuminate\Support\Facades\Cache::forget('article_show_v3_' . $article->slug);
         
         return $this->sendResponse(['likesCount' => $article->likes_count], 'Article liké avec succès.');
     }
@@ -335,8 +344,57 @@ class ArticleController extends BaseController
         $article->decrement('likes_count');
         
         // Invalidate cache
-        \Illuminate\Support\Facades\Cache::forget('article_show_' . $article->slug);
+        \Illuminate\Support\Facades\Cache::forget('article_show_v3_' . $article->slug);
         
         return $this->sendResponse(['likesCount' => $article->likes_count], 'Like retiré avec succès.');
+    }
+
+    /**
+     * Get related articles based on category or tags.
+     */
+    public function related(string $id): JsonResponse
+    {
+        $article = Article::findOrFail($id);
+        
+        $categoryIds = $article->categories()->pluck('categories.id');
+        $tagIds = $article->tags()->pluck('tags.id');
+
+        $related = Article::published()
+            ->where('articles.id', '!=', $article->id)
+            ->where(function ($query) use ($categoryIds, $tagIds) {
+                $query->whereHas('categories', function ($q) use ($categoryIds) {
+                    $q->whereIn('categories.id', $categoryIds);
+                })->orWhereHas('tags', function ($q) use ($tagIds) {
+                    $q->whereIn('tags.id', $tagIds);
+                });
+            })
+            ->with(['author', 'categories', 'tags', 'coverImage'])
+            ->limit(3)
+            ->get();
+
+        return $this->sendResponse(ArticleListResource::collection($related), 'Articles connexes récupérés.');
+    }
+
+    /**
+     * Get next and previous articles for navigation.
+     */
+    public function navigation(string $id): JsonResponse
+    {
+        $article = Article::findOrFail($id);
+        
+        $prev = Article::published()
+            ->where('published_at', '<', $article->published_at)
+            ->orderBy('published_at', 'desc')
+            ->first(['id', 'title', 'slug', 'excerpt']);
+
+        $next = Article::published()
+            ->where('published_at', '>', $article->published_at)
+            ->orderBy('published_at', 'asc')
+            ->first(['id', 'title', 'slug', 'excerpt']);
+
+        return $this->sendResponse([
+            'previous' => $prev ? new ArticleListResource($prev) : null,
+            'next' => $next ? new ArticleListResource($next) : null,
+        ], 'Navigation récupérée.');
     }
 }

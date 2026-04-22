@@ -49,15 +49,11 @@ class EventController extends BaseController
     )]
     public function index(Request $request): JsonResponse
     {
-        $cacheKey = 'events_index_' . md5(serialize($request->all()));
+        $events = Event::with(['coverImage', 'gallery'])
+            ->latest('event_date')
+            ->paginate($request->limit ?? 10);
 
-        return \Illuminate\Support\Facades\Cache::remember($cacheKey, 3600, function () use ($request) {
-            $events = Event::with(['coverImage'])
-                ->latest('event_date')
-                ->paginate($request->limit ?? 10);
-
-            return $this->sendResponse(EventResource::collection($events), 'Événements récupérés.', ['total' => $events->total()]);
-        });
+        return $this->sendResponse(EventResource::collection($events), 'Événements récupérés.', ['total' => $events->total()]);
     }
 
     /**
@@ -98,9 +94,13 @@ class EventController extends BaseController
             $event->seo()->create($data['seo']);
         }
 
+        if (isset($data['gallery_ids'])) {
+            $event->gallery()->sync($data['gallery_ids']);
+        }
+
         \Illuminate\Support\Facades\Cache::flush();
 
-        return $this->sendResponse(new EventResource($event->load(['coverImage', 'seo'])), 'Événement créé.', [], 201);
+        return $this->sendResponse(new EventResource($event->load(['coverImage', 'seo', 'gallery'])), 'Événement créé.', [], 201);
     }
 
     /**
@@ -126,13 +126,14 @@ class EventController extends BaseController
     {
         $cacheKey = 'event_show_' . $slug;
 
-        return \Illuminate\Support\Facades\Cache::remember($cacheKey, 86400, function () use ($slug) {
-            $event = Event::with(['coverImage', 'seo', 'recapArticle'])
+        $data = \Illuminate\Support\Facades\Cache::remember($cacheKey, 86400, function () use ($slug) {
+            $event = Event::with(['coverImage', 'seo', 'recapArticle', 'gallery', 'comments'])
                 ->where('slug', $slug)
                 ->firstOrFail();
-
-            return $this->sendResponse(new EventResource($event), 'Événement récupéré.');
+            return json_decode(json_encode(new EventResource($event)), true);
         });
+
+        return $this->sendResponse($data, 'Événement récupéré.');
     }
 
     /**
@@ -175,9 +176,13 @@ class EventController extends BaseController
             $event->seo()->updateOrCreate(['model_id' => $event->id, 'model_type' => Event::class], $data['seo']);
         }
 
+        if (isset($data['gallery_ids'])) {
+            $event->gallery()->sync($data['gallery_ids']);
+        }
+
         \Illuminate\Support\Facades\Cache::flush();
 
-        return $this->sendResponse(new EventResource($event->load(['coverImage', 'seo'])), 'Événement mis à jour.');
+        return $this->sendResponse(new EventResource($event->load(['coverImage', 'seo', 'gallery'])), 'Événement mis à jour.');
     }
 
     /**

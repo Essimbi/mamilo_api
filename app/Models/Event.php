@@ -22,7 +22,8 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: "location", type: "string", nullable: true),
         new OA\Property(property: "type", type: "string"),
         new OA\Property(property: "status", type: "string"),
-        new OA\Property(property: "likes_count", type: "integer")
+        new OA\Property(property: "likes_count", type: "integer"),
+        new OA\Property(property: "gallery", type: "array", items: new OA\Items(ref: "#/components/schemas/Media")),
     ]
 )]
 class Event extends Model
@@ -55,6 +56,11 @@ class Event extends Model
     public function recapArticle(): BelongsTo
     {
         return $this->belongsTo(Article::class, 'recap_article_id');
+    }
+
+    public function gallery(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Media::class, 'event_gallery', 'event_id', 'media_id');
     }
 
     public function seo(): MorphOne
