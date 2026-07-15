@@ -1,44 +1,39 @@
-FROM php:8.3-fpm
+# Multi-stage Dockerfile for Laravel 13 (+ PHP 8.3) with asset building
+FROM node:20-alpine AS node_builder
+WORKDIR /app
+COPY package.json package-lock.json* ./
+RUN npm ci --silent || npm install --silent
+COPY resources resources
+COPY vite.config.js .
+RUN npm run build
 
-# Install system dependencies
+FROM php:8.4-fpm
 RUN apt-get update && apt-get install -y \
     git \
-    curl \
-    libpng-dev \
-    libonig-dev \
-    libxml2-dev \
-    zip \
     unzip \
     libzip-dev \
-    libjpeg62-turbo-dev \
-    libfreetype6-dev \
-    nginx
+    libpng-dev \
+    libjpeg-dev \
+    libonig-dev \
+    libxml2-dev \
+    libicu-dev \
+    zlib1g-dev \
+    && docker-php-ext-configure gd --with-jpeg=/usr && docker-php-ext-install -j$(nproc) gd pdo pdo_mysql mbstring exif pcntl bcmath zip intl xml
 
-# Clear cache
-RUN apt-get clean && rm -rf /var/lib/apt/lists/*
+# Install composer
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Install PHP extensions
-RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip
+WORKDIR /var/www/html
 
-# Get latest Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+# Copy application files
+COPY . /var/www/html
 
-# Set working directory
-WORKDIR /var/www
+# Copy built assets from node builder (laravel-vite-plugin outputs to public/build)
+COPY --from=node_builder /app/public/build /var/www/html/public/build
 
-# Copy existing application directory contents
-COPY . /var/www
+# Install PHP dependencies
+RUN composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist || true
 
-# Install dependencies
-RUN composer install --no-interaction --optimize-autoloader --no-dev
-
-# Set permissions
-RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
-
-# Expose port 80
-EXPOSE 80
-
-# Start Nginx & PHP-FPM
-COPY docker/nginx.conf /etc/nginx/sites-available/default
-CMD service nginx start && php-fpm
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+EXPOSE 9000
+CMD ["php-fpm"]
